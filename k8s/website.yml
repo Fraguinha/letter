@@ -1,0 +1,56 @@
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: letter-image
+  namespace: flux-system
+spec:
+  image: fraguinha/fraguinha.com-letter
+  interval: 1m0s
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: letter-policy
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: letter-image
+  filterTags:
+    pattern: '^latest$'
+  policy:
+    alphabetical:
+      order: asc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: website
+  namespace: letter
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: website
+  template:
+    metadata:
+      labels:
+        app: website
+    spec:
+      containers:
+        - name: website
+          image: fraguinha/fraguinha.com-letter:latest@sha256:2961d2b27c7bfbd0238e21dda8e8f52f24beb14b8cd6c82a8a280c83c30ae68c # {"$imagepolicy": "flux-system:letter-policy"}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: website
+  namespace: letter
+spec:
+  selector:
+    app: website
+  ports:
+    - port: 80
+      targetPort: 80
